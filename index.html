@@ -43,6 +43,8 @@
             box-shadow: var(--shadow);
             overflow: hidden;
             animation: fadeIn 0.4s ease;
+            display: flex;
+            flex-direction: column;
         }
 
         @keyframes fadeIn {
@@ -98,6 +100,7 @@
         .panel {
             display: none;
             padding: 24px 20px;
+            flex: 1;
         }
 
         .panel.active {
@@ -277,13 +280,27 @@
             color: var(--primary);
             font-weight: 600;
         }
+
+        /* 开发者署名样式 */
+        .footer {
+            padding: 16px 20px;
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+            text-align: center;
+            margin-top: auto;
+        }
+        .developer {
+            font-size: 13px;
+            color: var(--gray-700);
+            opacity: 0.8;
+        }
     </style>
 </head>
 
 <body>
     <div class="calculator">
         <div class="header">
-            <h1>持仓买卖计算器</h1>
+            <h1>股票持仓买卖计算器</h1>
             <p>实时计算成本 / 市值 / 持仓数量 / 股价涨跌</p>
         </div>
 
@@ -407,6 +424,11 @@
                     <tbody></tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- 开发者署名 -->
+        <div class="footer">
+            <div class="developer">开发者：深圳钰华路炒饭养家（原炒股养家）</div>
         </div>
     </div>
 
