@@ -281,6 +281,38 @@
             font-weight: 600;
         }
 
+        /* 买入股数快捷按钮 */
+        .buy-share-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0 18px 0;
+        }
+        .buy-share-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .buy-share-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        .buy-amount-info {
+            background: #e6f7ff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #1890ff;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
         /* 开发者署名样式 */
         .footer {
             padding: 16px 20px;
@@ -325,7 +357,6 @@
                 <input type="number" step="0.01" id="sell_cost" placeholder="请输入成本价">
             </div>
 
-            <!-- 卖出市值提示 -->
             <div class="sell-tip" id="sell_tip">请选择卖出比例</div>
 
             <div class="ratio-group">
@@ -339,16 +370,19 @@
             <div class="result-card">
                 <div class="result-title">卖出后持仓结果</div>
                 <div class="result-item">
-                    <span class="result-label">最新成本价</span>
+                    <span class="result-label">最新成本价（元）</span>
                     <span class="result-value cost" id="sell_new_cost">--</span>
                 </div>
-                <!-- 卖出后持仓盈亏（%） -->
                 <div class="result-item">
                     <span class="result-label">卖出后持仓盈亏（%）</span>
                     <span class="result-value profit" id="sell_profit_rate">--</span>
                 </div>
                 <div class="result-item">
-                    <span class="result-label">剩余持仓市值</span>
+                    <span class="result-label">剩余持仓股数（股）</span>
+                    <span class="result-value" id="sell_left_shares">--</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">剩余持仓市值（元）</span>
                     <span class="result-value market" id="sell_new_market">--</span>
                 </div>
             </div>
@@ -368,18 +402,33 @@
                 <label>原持仓成本价（元）</label>
                 <input type="number" step="0.01" id="buy_old_cost" placeholder="请输入原成本价">
             </div>
+
             <div class="form-group">
-                <label>本次买入金额（元）</label>
-                <input type="number" id="buy_money" placeholder="请输入买入金额">
+                <label>本次买入股数（股）</label>
+                <input type="number" id="buy_shares" placeholder="请输入买入股数">
+            </div>
+
+            <!-- 加减快捷按钮 6个：+100 +500 +1000 / -100 -500 -1000 -->
+            <div class="buy-share-group">
+                <button class="buy-share-btn" data-type="add" data-num="100">+100股</button>
+                <button class="buy-share-btn" data-type="add" data-num="500">+500股</button>
+                <button class="buy-share-btn" data-type="add" data-num="1000">+1000股</button>
+                <button class="buy-share-btn" data-type="sub" data-num="100">-100股</button>
+                <button class="buy-share-btn" data-type="sub" data-num="500">-500股</button>
+                <button class="buy-share-btn" data-type="sub" data-num="1000">-1000股</button>
+            </div>
+
+            <!-- 实时显示买入金额 -->
+            <div class="buy-amount-info" id="buy_amount_show">
+                对应买入金额：-- 元
             </div>
 
             <div class="result-card">
                 <div class="result-title">买入后持仓结果</div>
                 <div class="result-item">
-                    <span class="result-label">新平均成本价</span>
+                    <span class="result-label">新平均成本价（元）</span>
                     <span class="result-value cost" id="buy_new_cost">--</span>
                 </div>
-                <!-- 新增：买入后持仓盈亏（%） -->
                 <div class="result-item">
                     <span class="result-label">买入后持仓盈亏（%）</span>
                     <span class="result-value" id="buy_profit_rate">--</span>
@@ -393,7 +442,7 @@
                     <span class="result-value" id="buy_available_qty">--</span>
                 </div>
                 <div class="result-item">
-                    <span class="result-label">新总持仓市值</span>
+                    <span class="result-label">新总持仓市值（元）</span>
                     <span class="result-value market" id="buy_new_market">--</span>
                 </div>
             </div>
@@ -433,7 +482,7 @@
     </div>
 
     <script>
-        // 标签切换
+        // 标签切换 —— 已修复！
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -470,64 +519,107 @@
             if (!p || !m || !c || !r) {
                 document.getElementById('sell_new_cost').textContent = '--';
                 profitRateEl.textContent = '--';
+                document.getElementById('sell_left_shares').textContent = '--';
                 document.getElementById('sell_new_market').textContent = '--';
                 tipEl.textContent = "请选择卖出比例";
                 profitRateEl.className = "result-value";
                 return;
             }
 
-            // 计算卖出市值
-            const sellAmount = m * r;
-            tipEl.textContent = `预计卖出市值：${sellAmount.toFixed(2)} 元`;
+            const totalShares = Math.floor(m / p);
+            const sellShares = Math.floor(totalShares * r);
+            const leftShares = totalShares - sellShares;
+            const sellAmount = (sellShares * p).toFixed(2);
+            
+            // 已修改：预计卖出股数/市值
+            tipEl.textContent = `预计卖出股数/市值：${sellShares}（股）${sellAmount}（元）`;
 
             const newCost = (c - r * p) / (1 - r);
-            const newMarket = m * (1 - r);
-            
-            // 计算盈亏比例
+            const newMarket = (leftShares * p).toFixed(2);
             const profitRate = ((p - newCost) / newCost) * 100;
             
             document.getElementById('sell_new_cost').textContent = newCost.toFixed(2);
             profitRateEl.textContent = profitRate.toFixed(2) + '%';
-            document.getElementById('sell_new_market').textContent = newMarket.toFixed(2);
+            document.getElementById('sell_left_shares').textContent = leftShares;
+            document.getElementById('sell_new_market').textContent = newMarket;
 
-            // 盈亏颜色（按你要求：正红、负绿、平白）
             if (profitRate > 0) {
-                profitRateEl.className = "result-value";
-                profitRateEl.style.color = "var(--danger)"; // 红
+                profitRateEl.style.color = "var(--danger)";
             } else if (profitRate < 0) {
-                profitRateEl.className = "result-value";
-                profitRateEl.style.color = "var(--success)"; // 绿
+                profitRateEl.style.color = "var(--success)";
             } else {
-                profitRateEl.className = "result-value";
-                profitRateEl.style.color = "#ffffff"; // 白
+                profitRateEl.style.color = "#666";
             }
         }
 
         // ============= 买入计算 =============
-        const buyInputs = document.querySelectorAll('#buy input');
-        buyInputs.forEach(i => i.addEventListener('input', calcBuy));
+        const buyPrice = document.getElementById('buy_price');
+        const buyOldQty = document.getElementById('buy_old_qty');
+        const buyOldCost = document.getElementById('buy_old_cost');
+        const buyShares = document.getElementById('buy_shares');
+        const buyAmountShow = document.getElementById('buy_amount_show');
+        const buyAddBtns = document.querySelectorAll('.buy-share-btn');
+
+        // 加减按钮逻辑（支持 +100/+500/+1000 和 -100/-500/-1000）
+        buyAddBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                const num = parseInt(btn.dataset.num);
+                let current = parseInt(buyShares.value) || 0;
+                
+                if (type === 'add') {
+                    current += num;
+                } else {
+                    current -= num;
+                    if (current < 0) current = 0; // 不能减到负数
+                }
+                
+                buyShares.value = current;
+                updateBuyAmount();
+                calcBuy();
+            });
+        });
+
+        // 实时显示买入金额
+        function updateBuyAmount() {
+            const p = parseFloat(buyPrice.value) || 0;
+            const shares = parseInt(buyShares.value) || 0;
+            const total = (p * shares).toFixed(2);
+            if (p > 0 && shares > 0) {
+                buyAmountShow.textContent = `对应买入金额：${total} 元`;
+            } else {
+                buyAmountShow.textContent = "对应买入金额：-- 元";
+            }
+        }
+
+        // 输入监听
+        buyPrice.addEventListener('input', () => { updateBuyAmount(); calcBuy(); });
+        buyOldQty.addEventListener('input', calcBuy);
+        buyOldCost.addEventListener('input', calcBuy);
+        buyShares.addEventListener('input', () => { updateBuyAmount(); calcBuy(); });
+
         function calcBuy() {
-            const p = parseFloat(document.getElementById('buy_price').value) || 0;
-            const oldQty = parseFloat(document.getElementById('buy_old_qty').value) || 0;
-            const oldCost = parseFloat(document.getElementById('buy_old_cost').value) || 0;
-            const money = parseFloat(document.getElementById('buy_money').value) || 0;
+            const p = parseFloat(buyPrice.value) || 0;
+            const oldQty = parseInt(buyOldQty.value) || 0;
+            const oldCost = parseFloat(buyOldCost.value) || 0;
+            const addShares = parseInt(buyShares.value) || 0;
             const profitRateEl = document.getElementById('buy_profit_rate');
             
-            if (!p || !oldQty || !oldCost || !money) {
+            if (!p || !oldQty || !oldCost || !addShares) {
                 document.getElementById('buy_new_cost').textContent = '--';
                 profitRateEl.textContent = '--';
                 document.getElementById('buy_new_qty').textContent = '--';
                 document.getElementById('buy_available_qty').textContent = '--';
                 document.getElementById('buy_new_market').textContent = '--';
-                profitRateEl.className = "result-value";
+                profitRateEl.style.color = "";
                 return;
             }
+
+            const addMoney = p * addShares;
             const oldTotalCost = oldQty * oldCost;
-            const addQty = money / p;
-            const newQty = oldQty + addQty;
-            const newCost = (oldTotalCost + money) / newQty;
+            const newQty = oldQty + addShares;
+            const newCost = (oldTotalCost + addMoney) / newQty;
             const newMarket = newQty * p;
-            // 计算买入后盈亏比例
             const profitRate = ((p - newCost) / newCost) * 100;
 
             document.getElementById('buy_new_cost').textContent = newCost.toFixed(2);
@@ -536,22 +628,18 @@
             document.getElementById('buy_available_qty').textContent = Math.floor(oldQty);
             document.getElementById('buy_new_market').textContent = newMarket.toFixed(2);
 
-            // 盈亏颜色
             if (profitRate > 0) {
-                profitRateEl.className = "result-value";
                 profitRateEl.style.color = "var(--danger)";
             } else if (profitRate < 0) {
-                profitRateEl.className = "result-value";
                 profitRateEl.style.color = "var(--success)";
             } else {
-                profitRateEl.className = "result-value";
-                profitRateEl.style.color = "#ffffff";
+                profitRateEl.style.color = "#666";
             }
         }
 
         // ============= 股价表格计算 =============
         const rangeBtns = document.querySelectorAll('.range-btn');
-        let currentRange = 10; // 默认±10
+        let currentRange = 10;
         rangeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 rangeBtns.forEach(b => b.classList.remove('active'));
@@ -572,7 +660,6 @@
                 tableBody.appendChild(emptyRow);
                 return;
             }
-            // 下跌
             for (let i = currentRange; i >= 1; i--) {
                 const percent = -i;
                 const price = startPrice * (1 + percent / 100);
@@ -580,11 +667,9 @@
                 row.innerHTML = `<td class="down">${percent}%</td><td class="down">${price.toFixed(2)}</td>`;
                 tableBody.appendChild(row);
             }
-            // 0点
             const zeroRow = document.createElement('tr');
             zeroRow.innerHTML = `<td class="zero">0%</td><td class="zero">${startPrice.toFixed(2)}</td>`;
             tableBody.appendChild(zeroRow);
-            // 上涨
             for (let i = 1; i <= currentRange; i++) {
                 const percent = i;
                 const price = startPrice * (1 + percent / 100);
