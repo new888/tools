@@ -167,7 +167,7 @@
             color: white;
         }
 
-        .sell-tip {
+        .sell-tip, .buy-tip {
             background: #f0f7ff;
             border-left: 4px solid var(--primary);
             padding: 12px 16px;
@@ -303,15 +303,6 @@
             background: var(--primary);
             color: white;
         }
-        .buy-amount-info {
-            background: #e6f7ff;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 14px;
-            color: #1890ff;
-            margin-bottom: 16px;
-            text-align: center;
-        }
 
         /* 开发者署名样式 */
         .footer {
@@ -365,6 +356,8 @@
                 <button class="ratio-btn" data-ratio="0.3333">1/3</button>
                 <button class="ratio-btn" data-ratio="0.5">1/2</button>
                 <button class="ratio-btn" data-ratio="0.6666">2/3</button>
+                <!-- 新增：不卖 按钮 -->
+                <button class="ratio-btn" data-ratio="0">不卖</button>
             </div>
 
             <div class="result-card">
@@ -403,12 +396,10 @@
                 <input type="number" step="0.01" id="buy_old_cost" placeholder="请输入成本">
             </div>
 
-            <div class="form-group">
-                <label>本次买入股数（股）</label>
-                <input type="number" id="buy_shares" placeholder="请输入买入股数">
+            <div class="buy-tip" id="buy_tip">
+                请选择买入股数
             </div>
 
-            <!-- 加减快捷按钮 6个：+100 +500 +1000 / -100 -500 -1000 -->
             <div class="buy-share-group">
                 <button class="buy-share-btn" data-type="add" data-num="100">+100股</button>
                 <button class="buy-share-btn" data-type="add" data-num="500">+500股</button>
@@ -416,11 +407,6 @@
                 <button class="buy-share-btn" data-type="sub" data-num="100">-100股</button>
                 <button class="buy-share-btn" data-type="sub" data-num="500">-500股</button>
                 <button class="buy-share-btn" data-type="sub" data-num="1000">-1000股</button>
-            </div>
-
-            <!-- 实时显示买入金额 -->
-            <div class="buy-amount-info" id="buy_amount_show">
-                对应买入金额：-- 元
             </div>
 
             <div class="result-card">
@@ -506,7 +492,7 @@
             });
         });
         sellInputs.forEach(i => i.addEventListener('input', calcSell));
-        
+
         function calcSell() {
             const p = parseFloat(document.getElementById('sell_price').value) || 0;
             const m = parseFloat(document.getElementById('sell_market').value) || 0;
@@ -516,12 +502,13 @@
             const tipEl = document.getElementById('sell_tip');
             const profitRateEl = document.getElementById('sell_profit_rate');
             
-            if (!p || !m || !c || !r) {
+            if (!p || !m || !c) {
                 document.getElementById('sell_new_cost').textContent = '--';
                 profitRateEl.textContent = '--';
                 document.getElementById('sell_left_shares').textContent = '--';
                 document.getElementById('sell_new_market').textContent = '--';
-                tipEl.textContent = "请选择卖出比例";
+                if(r === 0) tipEl.textContent = "默认卖出0股";
+                else tipEl.textContent = "请选择卖出比例";
                 profitRateEl.className = "result-value";
                 return;
             }
@@ -531,9 +518,13 @@
             const leftShares = totalShares - sellShares;
             const sellAmount = (sellShares * p).toFixed(2);
             
-            tipEl.textContent = `预计卖出股数/市值：${sellShares}（股）${sellAmount}（元）`;
+            if(r === 0){
+                tipEl.textContent = `已选择：不卖，当前持仓：${totalShares}股`;
+            }else{
+                tipEl.textContent = `预计卖出股数/市值：${sellShares}（股）${sellAmount}（元）`;
+            }
 
-            const newCost = (c - r * p) / (1 - r);
+            const newCost = r === 0 ? c : (c - r * p) / (1 - r);
             const newMarket = (leftShares * p).toFixed(2);
             const profitRate = ((p - newCost) / newCost) * 100;
             
@@ -555,56 +546,57 @@
         const buyPrice = document.getElementById('buy_price');
         const buyOldQty = document.getElementById('buy_old_qty');
         const buyOldCost = document.getElementById('buy_old_cost');
-        const buyShares = document.getElementById('buy_shares');
-        const buyAmountShow = document.getElementById('buy_amount_show');
+        const buyTip = document.getElementById('buy_tip');
         const buyAddBtns = document.querySelectorAll('.buy-share-btn');
+        
+        let buyShares = 0;
 
-        // 加减按钮逻辑
         buyAddBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const type = btn.dataset.type;
                 const num = parseInt(btn.dataset.num);
-                let current = parseInt(buyShares.value) || 0;
                 
                 if (type === 'add') {
-                    current += num;
+                    buyShares += num;
                 } else {
-                    current -= num;
-                    if (current < 0) current = 0;
+                    buyShares -= num;
+                    if (buyShares < 0) buyShares = 0;
                 }
                 
-                buyShares.value = current;
-                updateBuyAmount();
+                updateBuyTip();
                 calcBuy();
             });
         });
 
-        // 实时显示买入金额
-        function updateBuyAmount() {
+        function updateBuyTip() {
             const p = parseFloat(buyPrice.value) || 0;
-            const shares = parseInt(buyShares.value) || 0;
-            const total = (p * shares).toFixed(2);
-            if (p > 0 && shares > 0) {
-                buyAmountShow.textContent = `对应买入金额：${total} 元`;
+            const total = (p * buyShares).toFixed(2);
+            
+            if (p > 0 && buyShares > 0) {
+                buyTip.textContent = `预计买入股数/金额：${buyShares}（股）${total}（元）`;
             } else {
-                buyAmountShow.textContent = "对应买入金额：-- 元";
+                buyTip.textContent = "默认买入0股";
             }
         }
 
-        // 输入监听
-        buyPrice.addEventListener('input', () => { updateBuyAmount(); calcBuy(); });
+        buyPrice.addEventListener('input', () => { updateBuyTip(); calcBuy(); });
         buyOldQty.addEventListener('input', calcBuy);
         buyOldCost.addEventListener('input', calcBuy);
-        buyShares.addEventListener('input', () => { updateBuyAmount(); calcBuy(); });
+
+        window.addEventListener('load', () => {
+            calcSell();
+            updateBuyTip();
+            calcBuy();
+        });
 
         function calcBuy() {
             const p = parseFloat(buyPrice.value) || 0;
             const oldQty = parseInt(buyOldQty.value) || 0;
             const oldCost = parseFloat(buyOldCost.value) || 0;
-            const addShares = parseInt(buyShares.value) || 0;
+            const addShares = buyShares;
             const profitRateEl = document.getElementById('buy_profit_rate');
             
-            if (!p || !oldQty || !oldCost || !addShares) {
+            if (!p || !oldQty || !oldCost) {
                 document.getElementById('buy_new_cost').textContent = '--';
                 profitRateEl.textContent = '--';
                 document.getElementById('buy_new_qty').textContent = '--';
