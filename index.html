@@ -345,16 +345,16 @@
         <!-- 卖出计算 -->
         <div class="panel active" id="sell">
             <div class="form-group">
-                <label>当前股价（元）</label>
-                <input type="number" step="0.01" id="sell_price" placeholder="请输入当前股价">
+                <label>现价（元）</label>
+                <input type="number" step="0.01" id="sell_price" placeholder="请输入现价">
             </div>
             <div class="form-group">
                 <label>当前持仓市值（元）</label>
                 <input type="number" id="sell_market" placeholder="请输入总市值">
             </div>
             <div class="form-group">
-                <label>原持仓成本价（元）</label>
-                <input type="number" step="0.01" id="sell_cost" placeholder="请输入成本价">
+                <label>成本（元）</label>
+                <input type="number" step="0.01" id="sell_cost" placeholder="请输入成本">
             </div>
 
             <div class="sell-tip" id="sell_tip">请选择卖出比例</div>
@@ -391,16 +391,16 @@
         <!-- 买入计算 -->
         <div class="panel" id="buy">
             <div class="form-group">
-                <label>当前股价（元）</label>
-                <input type="number" step="0.01" id="buy_price" placeholder="请输入当前股价">
+                <label>现价（元）</label>
+                <input type="number" step="0.01" id="buy_price" placeholder="请输入现价">
             </div>
             <div class="form-group">
-                <label>原持仓数量（股）</label>
-                <input type="number" id="buy_old_qty" placeholder="请输入原有股数">
+                <label>持仓数量（股）</label>
+                <input type="number" id="buy_old_qty" placeholder="请输入持仓数量">
             </div>
             <div class="form-group">
-                <label>原持仓成本价（元）</label>
-                <input type="number" step="0.01" id="buy_old_cost" placeholder="请输入原成本价">
+                <label>成本（元）</label>
+                <input type="number" step="0.01" id="buy_old_cost" placeholder="请输入成本">
             </div>
 
             <div class="form-group">
@@ -482,7 +482,7 @@
     </div>
 
     <script>
-        // 标签切换 —— 已修复！
+        // 标签切换
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -531,7 +531,6 @@
             const leftShares = totalShares - sellShares;
             const sellAmount = (sellShares * p).toFixed(2);
             
-            // 已修改：预计卖出股数/市值
             tipEl.textContent = `预计卖出股数/市值：${sellShares}（股）${sellAmount}（元）`;
 
             const newCost = (c - r * p) / (1 - r);
@@ -560,7 +559,7 @@
         const buyAmountShow = document.getElementById('buy_amount_show');
         const buyAddBtns = document.querySelectorAll('.buy-share-btn');
 
-        // 加减按钮逻辑（支持 +100/+500/+1000 和 -100/-500/-1000）
+        // 加减按钮逻辑
         buyAddBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const type = btn.dataset.type;
@@ -571,7 +570,7 @@
                     current += num;
                 } else {
                     current -= num;
-                    if (current < 0) current = 0; // 不能减到负数
+                    if (current < 0) current = 0;
                 }
                 
                 buyShares.value = current;
